@@ -52,6 +52,18 @@ machine(L1Cache, "MSI L1 Cache")
     //ECE552: Transient States
     //========================
 
+    IS_D, AccessPermission:Busy, desc="Transition state from invalid to shared";
+    IM_AD, AccessPermission:Busy, desc="Transition state from invalid to modified, waiting for data OR inv_acks";
+    IM_A, AccessPermission:Busy, desc="Transition state from invalid to modified, waiting for cache inv_acks and last";
+
+    SM_AD, AccessPermission:Busy, desc="Transition state from shared to modified, waiting for data OR inv_acks";
+    SM_A, AccessPermission:Busy, desc="Transition state from shared to modified, waiting for cache inv_acks and last";
+    SI_A, AccessPermission:Busy, desc="Transition state from shared to invalid";
+
+    II_A, AccessPermission:Busy, desc="Transition state from S to invalid when invalidate request received before Put-S";
+
+    MI_A, AccessPermission:Busy, desc="Transition state from M to invalid on a replacement request";
+
     /* ECE552: Complete this section here */
 
   }
@@ -603,6 +615,371 @@ machine(L1Cache, "MSI L1 Cache")
   // =============================================================================
 
   /* ECE552: Complete this section here */
- 
+
+  // =============================================================================
+  // INVALID transitions
+  // =============================================================================
+
+  //INVALID -> IS_D (-> SHARED)
+  transition(I, Load, IS_D) {
+    //allocate L1 entry
+    i_allocateL1CacheBlock;
+
+    //allocate TBE entry
+    v_allocateTBE;
+
+    //maybe copy cache contents to TBE entry? IDk, cache block is still invalid so maybe no point
+    x_copyDataFromCacheToTBE;
+
+    //inform core of a cache miss
+    p_profileMiss;
+
+    //send GetS request and transistion to IS_D
+    as_issueGetS;
+
+    //pop request from queue
+    m_popMandatoryQueue;
+  }
+
+  //INVALID -> IM_AD (-> MODIFIED)
+  transition(I, Store, IM_AD) {
+    i_allocateL1CacheBlock;
+    v_allocateTBE;
+    x_copyDataFromCacheToTBE;
+    p_profileMiss;
+    am_issueGetM;
+    m_popMandatoryQueue;
+  }
+  // =============================================================================
+
+  // =============================================================================
+  // IS_D -> STABLE transitions
+  // =============================================================================
+
+  //IS_D -> SHARED from cache owner (cache blcok is M)
+  transition(IS_D, Data_from_Owner, S) {
+    u_writeDataToCache;
+    rx_load_hit;
+    w_deallocateTBE;
+    n_popResponseQueue;
+  }
+
+  //IS_D -> SHARED from directory
+  transition(IS_D, Data_from_Dir_No_Acks, S) {
+    u_writeDataToCache;
+    rx_load_hit;
+    w_deallocateTBE;
+    n_popResponseQueue;
+  }
+
+  //IS_D -> Stall
+  transition(IS_D, {Load, Store, Replacement, Inv}) {
+    z_stall;
+  }
+  // =============================================================================
+
+
+  // =============================================================================
+  // IM_AD transitions
+  // =============================================================================
+
+  //IM_AD -> MODIFIED from cache owner
+  transition(IM_AD, Data_from_Owner, M) {
+    u_writeDataToCache;
+    sx_store_hit;
+    w_deallocateTBE;
+    n_popResponseQueue;
+  }
+
+  //IM_AD -> MODIFIED from directory ack = 0
+  transition(IM_AD, Data_from_Dir_No_Acks, M) {
+    u_writeDataToCache;
+    sx_store_hit;
+    w_deallocateTBE;
+    n_popResponseQueue;
+  }
+
+  //IM_AD -> IM_A
+  transition(IM_AD, Data_from_Dir_Ack_Cnt, IM_A) {
+    u_writeDataToCache;
+    //DO I NEED TO COPY DATA TO TBE???
+    q_updateAckCount;
+    n_popResponseQueue;
+  }
+
+  //Inv_ACK from another cache, SHOULDN'T HAPPEN THOUGH
+  transition(IM_AD, Inv_Ack) {
+    q_updateAckCount;
+    n_popResponseQueue;
+  }
+
+  //STALL
+  transition(IM_AD, {Load, Store, Replacement, Fwd_GetS, Fwd_GetM}) {
+    z_stall;
+  }
+  // =============================================================================
+
+  // =============================================================================
+  // IM_A transitions
+  // =============================================================================
+
+  //IM_A recieves inv_acks
+  transition(IM_A, Inv_Ack) {
+    q_updateAckCount;
+    n_popResponseQueue;
+  }
+
+  //IM_A -> MODIFIED recieves inv_ack_all
+  transition(IM_A, Inv_Ack_all, M) {
+    sx_store_hit;
+    w_deallocateTBE;
+    n_popResponseQueue;
+  }
+
+  //STALL
+  transition(IM_A, {Load, Store, Replacement, Fwd_GetS, Fwd_GetM}) {
+    z_stall;
+  }
+  // =============================================================================
+
+
+  // =============================================================================
+  // SHARED transitions
+  // =============================================================================
+
+  //LOAD hit
+  transition(S, Load) {
+    r_load_hit;
+    m_popMandatoryQueue;
+  }
+
+  //S -> M send to SM_AD
+  transition(S, Store, SM_AD) {
+    v_allocateTBE;
+    x_copyDataFromCacheToTBE;
+    p_profileMiss;
+    am_issueGetM;
+    m_popMandatoryQueue;
+  }
+
+  //REPLACEMENT
+  transition(S, Replacement, SI_A) {
+    v_allocateTBE;
+    x_copyDataFromCacheToTBE;
+    bs_issuePUTS;
+    m_popMandatoryQueue;
+  }
+
+  //INVALIDATE REQUEST
+  transition(S, Inv, I) {
+    h_deallocateL1CacheBlock;
+    forward_eviction_to_cpu;
+    fi_sendInvAck;
+    o_popForwardedRequestQueue;
+  }
+  // =============================================================================
+
+
+  // =============================================================================
+  // SM_AD transitions
+  // =============================================================================
+
+  //LOAD hit
+  transition(SM_AD, Load) {
+    r_load_hit;
+    m_popMandatoryQueue;
+  }
+
+  //SM_AD -> MODIFIED from cache owner
+  transition(SM_AD, Data_from_Owner, M) {
+    u_writeDataToCache;
+    sx_store_hit;
+    w_deallocateTBE;
+    n_popResponseQueue;
+  }
+
+  //SM_AD -> MODIFIED from directory ack = 0
+  transition(SM_AD, Data_from_Dir_No_Acks, M) {
+    u_writeDataToCache;
+    sx_store_hit;
+    w_deallocateTBE;  
+    n_popResponseQueue;
+  }
+
+  //SM_AD -> SM_A
+  transition(SM_AD, Data_from_Dir_Ack_Cnt, SM_A) {
+    u_writeDataToCache;
+    //DO I NEED TO COPY DATA TO TBE???
+    q_updateAckCount;
+    n_popResponseQueue;
+  }
+
+  //Inv_ACK from another cache, SHOULDN'T HAPPEN THOUGH
+  transition(SM_AD, Inv_Ack) {
+    q_updateAckCount;
+    n_popResponseQueue;
+  }
+
+  //STALL
+  transition(SM_AD, {Store, Replacement, Fwd_GetS, Fwd_GetM}) {
+    z_stall;
+  }
+
+  //INVALIDATE REQUEST //???
+  transition(SM_AD, Inv, IM_AD) {
+    h_deallocateL1CacheBlock;
+    forward_eviction_to_cpu;
+    fi_sendInvAck;
+
+    i_allocateL1CacheBlock;
+    x_copyDataFromCacheToTBE;
+    o_popForwardedRequestQueue;
+  }
+  // =============================================================================
+
+  // =============================================================================
+  // SM_A transitions
+  // =============================================================================
+
+  //LOAD hit
+  transition(SM_A, Load) {
+    r_load_hit;
+    m_popMandatoryQueue;
+  }
+
+  //STALL
+  transition(SM_A, {Store, Replacement, Fwd_GetS, Fwd_GetM}) {
+    z_stall;
+  }
+
+  //SM_A recieves inv_acks
+  transition(SM_A, Inv_Ack) {
+    q_updateAckCount;
+    n_popResponseQueue;
+  }
+
+  //SM_A -> MODIFIED recieves inv_ack_all
+  transition(SM_A, Inv_Ack_all, M) {
+    sx_store_hit;
+    w_deallocateTBE;
+    n_popResponseQueue;
+  }
+  // =============================================================================
+
+
+  // =============================================================================
+  // SI_A transitions
+  // =============================================================================
+
+  //STALL
+  transition(SI_A, {Load, Store, Replacement}) {
+    z_stall;
+  }
+
+  //PUT_ACK
+  transition(SI_A, WB_Ack, I) {
+    h_deallocateL1CacheBlock;
+    forward_eviction_to_cpu;
+    w_deallocateTBE;
+    o_popForwardedRequestQueue;
+  }
+
+  //INVALIDATE REQUEST
+  transition(SI_A, Inv, II_A) {
+    fi_sendInvAck;
+    o_popForwardedRequestQueue;
+  }
+  // =============================================================================
+
+
+  // =============================================================================
+  // II_A transitions
+  // =============================================================================
+
+  //STALL
+  transition(II_A, {Load, Store, Replacement}) {
+    z_stall;
+  }
+
+  //PUT_ACK
+  transition(II_A, WB_Ack, I) {
+    h_deallocateL1CacheBlock;
+    forward_eviction_to_cpu;
+    w_deallocateTBE;
+    o_popForwardedRequestQueue;
+  }
+  // =============================================================================
+
+
+  // =============================================================================
+  // MODIFED transitions
+  // =============================================================================
+
+  //LOAD HIT
+  transition(M, Load) {
+    r_load_hit;
+    m_popMandatoryQueue;
+  }
+
+  //STORE HIT
+  transition(M, Store) {
+    s_store_hit;
+    m_popMandatoryQueue;
+  }
+
+  //REPLACEMENT REQUEST M -> MI_A
+  transition(M, Replacement, MI_A) {
+    v_allocateTBE;
+    x_copyDataFromCacheToTBE;
+    de_sendDataFromCacheToDir;
+    bm_issuePUTM;
+    m_popMandatoryQueue;
+  }
+
+  //FWD_GETS -> S | need to forward data from cache to directory and requester cache, then set state to S
+  transition(M, Fwd_GetS, S) {
+    e_sendDataFromCacheToRequestor;
+    de_sendDataFromCacheToDir;   
+    o_popForwardedRequestQueue;
+  }
+
+  //FWD_GETM -> I | need to forward data from cache to requester cache, then set state to I, another cache is writing to memory
+  transition(M, Fwd_GetM, I) {
+    e_sendDataFromCacheToRequestor;
+    o_popForwardedRequestQueue;
+  }
+  // =============================================================================
+
+
+  // =============================================================================
+  // MI_A transitions
+  // =============================================================================
+
+  //STALL
+  transition(MI_A, {Load, Store, Replacement}) {
+    z_stall;
+  }
+
+  //FWD_GETS -> SI_A | get a fwd_gets request while in transition from M->I, need to take path of S->I
+  transition(MI_A, Fwd_GetS, SI_A) {
+    ee_sendDataFromTBEToRequestor;
+    dee_sendDataFromTBEToDir;
+    o_popForwardedRequestQueue;
+  }
+
+  //FWD_GETM -> II_A | get a fwd_getm request while in transition from M->I, need to take path of II_A, block is essentially invalid but needs the ack to proceed to I
+  transition(MI_A, Fwd_GetM, II_A) {
+    ee_sendDataFromTBEToRequestor;
+    o_popForwardedRequestQueue;
+  }
+
+  //WB_ACK -> I | receive ack from directory, can go to I now
+  transition(MI_A, WB_Ack, I) {
+    h_deallocateL1CacheBlock;
+    forward_eviction_to_cpu;
+    w_deallocateTBE;
+    o_popForwardedRequestQueue;
+  }
+  // =============================================================================
 
 }
