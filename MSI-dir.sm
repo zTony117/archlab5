@@ -543,22 +543,22 @@ getDirectoryEntry(address).Sharers);
   transition(I, GETS, IS_MD) {
     qf_queueMemoryFetchRequest;
     ars2_addRequestorToSharers;
-    i_popIncomingRequestQueue;
   }
 
   transition(IS_MD, Memory_Data, S) {
     d_sendData;
+    i_popIncomingRequestQueue;
     qm_popMemQueue;
   }
 
   transition(I, GETM, IM_MD) {
     qf_queueMemoryFetchRequest;
     e_ownerIsRequestor;
-    i_popIncomingRequestQueue;
   }
 
   transition(IM_MD, Memory_Data, M){
     d_sendData;
+    i_popIncomingRequestQueue;
     qm_popMemQueue;
   }
 
@@ -628,14 +628,14 @@ getDirectoryEntry(address).Sharers);
 
   transition(M, PUTM_Owner, MI_WBA)
   {
-    lq2_queueMemoryWBRequest;
+    lq_queueMemoryWBRequest;
     c_clearOwner;
-    i_popIncomingRequestQueue;
   }
 
   transition(MI_WBA, Memory_Ack, I)
   {
     a_sendWriteBackAck;
+    i_popIncomingRequestQueue;
     qm_popMemQueue;
   }
 
@@ -653,6 +653,7 @@ getDirectoryEntry(address).Sharers);
   {
     z_stall;
   }
+
 
   // /* ECE552: Complete this section here */
   // transition(I, GETS, IS_MD) {
