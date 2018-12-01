@@ -654,6 +654,11 @@ getDirectoryEntry(address).Sharers);
     z_stall;
   }
 
+  transition(MI_WBA, PUTM_NotOwner)
+  {
+    z_stall;
+  }
+
 
   // /* ECE552: Complete this section here */
   // transition(I, GETS, IS_MD) {
