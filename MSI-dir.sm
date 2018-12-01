@@ -639,6 +639,21 @@ getDirectoryEntry(address).Sharers);
     qm_popMemQueue;
   }
 
+  transition(IM_MD, GETM, IM_MD)
+  {
+    z_stall;
+  }
+
+  transition(MS_D, GETM, MS_D)
+  {
+    z_stall;
+  }
+
+  transition(MS_D, GETS, MS_D)
+  {
+    z_stall;
+  }
+
   // /* ECE552: Complete this section here */
   // transition(I, GETS, IS_MD) {
 
