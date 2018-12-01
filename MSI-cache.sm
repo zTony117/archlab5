@@ -650,6 +650,10 @@ machine(L1Cache, "MSI L1 Cache")
     am_issueGetM;
     m_popMandatoryQueue;
   }
+
+  transition(I, Replacement) {
+    z_stall;
+  }
   // =============================================================================
 
   // =============================================================================
@@ -947,8 +951,9 @@ machine(L1Cache, "MSI L1 Cache")
   transition(M, Replacement, MI_A) {
     v_allocateTBE;
     x_copyDataFromCacheToTBE;
-    de_sendDataFromCacheToDir;
     bm_issuePUTM;
+    //de_sendDataFromCacheToDir;
+    
     m_popMandatoryQueue;
   }
 
