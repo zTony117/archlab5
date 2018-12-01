@@ -683,6 +683,14 @@ machine(L1Cache, "MSI L1 Cache")
   // IM_AD transitions
   // =============================================================================
 
+  //DATA_FROM_DIR_ACK_COUNT_LAST
+  transition(IM_AD, Data_from_Dir_Ack_Cnt_Last, M) {
+    u_writeDataToCache;
+    sx_store_hit;
+    w_deallocateTBE;
+    n_popResponseQueue;
+  }
+
   //IM_AD -> MODIFIED from cache owner
   transition(IM_AD, Data_from_Owner, M) {
     u_writeDataToCache;
@@ -783,6 +791,14 @@ machine(L1Cache, "MSI L1 Cache")
   // =============================================================================
   // SM_AD transitions
   // =============================================================================
+
+  //DATA_FROM_DIR_ACK_COUNT_LAST
+  transition(SM_AD, Data_from_Dir_Ack_Cnt_Last, M) {
+    u_writeDataToCache;
+    sx_store_hit;
+    w_deallocateTBE;
+    n_popResponseQueue;
+  }
 
   //LOAD hit
   transition(SM_AD, {Load, Ifetch}) {
