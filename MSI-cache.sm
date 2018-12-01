@@ -650,10 +650,6 @@ machine(L1Cache, "MSI L1 Cache")
     am_issueGetM;
     m_popMandatoryQueue;
   }
-
-  transition(I, Replacement) {
-    z_stall;
-  }
   // =============================================================================
 
   // =============================================================================
@@ -932,7 +928,7 @@ machine(L1Cache, "MSI L1 Cache")
 
 
   // =============================================================================
-  // MODIFED transitions
+  // MODIFIED transitions
   // =============================================================================
 
   //LOAD HIT
@@ -967,6 +963,8 @@ machine(L1Cache, "MSI L1 Cache")
   //FWD_GETM -> I | need to forward data from cache to requester cache, then set state to I, another cache is writing to memory
   transition(M, Fwd_GetM, I) {
     e_sendDataFromCacheToRequestor;
+    h_deallocateL1CacheBlock;
+    forward_eviction_to_cpu;
     o_popForwardedRequestQueue;
   }
   // =============================================================================
