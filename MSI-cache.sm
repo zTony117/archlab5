@@ -629,7 +629,7 @@ machine(L1Cache, "MSI L1 Cache")
     v_allocateTBE;
 
     //maybe copy cache contents to TBE entry? IDk, cache block is still invalid so maybe no point
-    x_copyDataFromCacheToTBE;
+    //x_copyDataFromCacheToTBE;
 
     //inform core of a cache miss
     p_profileMiss;
@@ -645,7 +645,7 @@ machine(L1Cache, "MSI L1 Cache")
   transition(I, Store, IM_AD) {
     i_allocateL1CacheBlock;
     v_allocateTBE;
-    x_copyDataFromCacheToTBE;
+    //x_copyDataFromCacheToTBE;
     p_profileMiss;
     am_issueGetM;
     m_popMandatoryQueue;
@@ -775,7 +775,7 @@ machine(L1Cache, "MSI L1 Cache")
     v_allocateTBE;
     x_copyDataFromCacheToTBE;
     bs_issuePUTS;
-    m_popMandatoryQueue;
+    //m_popMandatoryQueue;
   }
 
   //INVALIDATE REQUEST
@@ -950,7 +950,7 @@ machine(L1Cache, "MSI L1 Cache")
     bm_issuePUTM;
     //de_sendDataFromCacheToDir;
     
-    m_popMandatoryQueue;
+    //m_popMandatoryQueue;
   }
 
   //FWD_GETS -> S | need to forward data from cache to directory and requester cache, then set state to S

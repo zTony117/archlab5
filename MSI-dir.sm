@@ -51,6 +51,7 @@ machine(Directory, "Directory protocol")
     IM_MD, AccessPermission:Busy, desc="Transitioning from I to M, waiting for data from memory";
     MS_D, AccessPermission:Busy, desc="Transitioning from M to S, waiting for data from cache";
     MI_WBA, AccessPermission:Busy, desc="Transitioning from M to I, waiting for write back ack from memory";
+    MS_WBA, AccessPermission:Busy, desc="Transitioning from M to S, waiting for write back ack from memory";
 
     /* ECE552: Complete this section here */
   }
@@ -541,6 +542,7 @@ getDirectoryEntry(address).Sharers);
   // =============================================================================
 
   transition(I, GETS, IS_MD) {
+    vv_allocateTBEFromRequestNet;
     qf_queueMemoryFetchRequest;
     ars2_addRequestorToSharers;
     i_popIncomingRequestQueue;
@@ -548,10 +550,12 @@ getDirectoryEntry(address).Sharers);
 
   transition(IS_MD, Memory_Data, S) {
     d_sendData;
+    w_deallocateTBE;
     qm_popMemQueue;
   }
 
   transition(I, GETM, IM_MD) {
+    vv_allocateTBEFromRequestNet;
     qf_queueMemoryFetchRequest;
     e_ownerIsRequestor;
     i_popIncomingRequestQueue;
@@ -559,6 +563,7 @@ getDirectoryEntry(address).Sharers);
 
   transition(IM_MD, Memory_Data, M){
     d_sendData;
+    w_deallocateTBE;
     qm_popMemQueue;
   }
 
@@ -599,6 +604,7 @@ getDirectoryEntry(address).Sharers);
 
   transition(M, GETS, MS_D)
   {
+    vv_allocateTBEFromRequestNet;
     f_forwardRequest;
     aos_addOwnertoSharers;
     ars2_addRequestorToSharers;
@@ -606,10 +612,17 @@ getDirectoryEntry(address).Sharers);
     i_popIncomingRequestQueue;
   }
 
-  transition(MS_D, Data, S)
+  transition(MS_D, Data, MS_WBA)
   {
     pl2_writeDataToDirectory;
+    lq2_queueMemoryWBRequest;
+    w_deallocateTBE;
     pr_popIncomingResponseQueue;
+  }
+
+  transition(MS_WBA, Memory_Ack, S)
+  {
+    qm_popMemQueue;
   }
 
   transition(M, GETM, M)
@@ -628,34 +641,31 @@ getDirectoryEntry(address).Sharers);
 
   transition(M, PUTM_Owner, MI_WBA)
   {
-    lq_queueMemoryWBRequest;
+    pl_writeDataToDirectory;
+    vv_allocateTBEFromRequestNet;
+    qwt_queueMemoryWBRequest_partialTBE;
     c_clearOwner;
     i_popIncomingRequestQueue;
-    
   }
 
   transition(MI_WBA, Memory_Ack, I)
   {
+    w_deallocateTBE;
     la_sendWriteBackAck;
     qm_popMemQueue;
   }
 
-  transition(IM_MD, GETM, IM_MD)
+  transition(IM_MD, {GETM,GETS})
   {
     z_stall;
   }
 
-  transition(MS_D, GETM, MS_D)
+  transition({MS_D,MS_WBA,IS_MD}, {GETM, GETS, PUTM_NotOwner, PUTS_NotLast})
   {
     z_stall;
   }
 
-  transition(MS_D, GETS, MS_D)
-  {
-    z_stall;
-  }
-
-  transition(MI_WBA, PUTM_NotOwner)
+  transition(MI_WBA, {PUTM_NotOwner,GETM, GETS})
   {
     z_stall;
   }
