@@ -543,22 +543,22 @@ getDirectoryEntry(address).Sharers);
   transition(I, GETS, IS_MD) {
     qf_queueMemoryFetchRequest;
     ars2_addRequestorToSharers;
+    i_popIncomingRequestQueue;
   }
 
   transition(IS_MD, Memory_Data, S) {
     d_sendData;
-    i_popIncomingRequestQueue;
     qm_popMemQueue;
   }
 
   transition(I, GETM, IM_MD) {
     qf_queueMemoryFetchRequest;
     e_ownerIsRequestor;
+    i_popIncomingRequestQueue;
   }
 
   transition(IM_MD, Memory_Data, M){
     d_sendData;
-    i_popIncomingRequestQueue;
     qm_popMemQueue;
   }
 
@@ -592,7 +592,7 @@ getDirectoryEntry(address).Sharers);
 
   transition(S, PUTS_Last, I)
   {
-    kk_removeRequestSharer;
+    cs_clearSharers;
     a_sendWriteBackAck;
     i_popIncomingRequestQueue;
   }
@@ -630,12 +630,13 @@ getDirectoryEntry(address).Sharers);
   {
     lq_queueMemoryWBRequest;
     c_clearOwner;
+    i_popIncomingRequestQueue;
+    
   }
 
   transition(MI_WBA, Memory_Ack, I)
   {
-    a_sendWriteBackAck;
-    i_popIncomingRequestQueue;
+    la_sendWriteBackAck;
     qm_popMemQueue;
   }
 
