@@ -655,7 +655,7 @@ getDirectoryEntry(address).Sharers);
     qm_popMemQueue;
   }
 
-  transition(IM_MD, {GETM,GETS})
+  transition(IM_MD, {GETM, GETS, PUTM_NotOwner, PUTS_NotLast})
   {
     z_stall;
   }
@@ -665,7 +665,7 @@ getDirectoryEntry(address).Sharers);
     z_stall;
   }
 
-  transition(MI_WBA, {PUTM_NotOwner,GETM, GETS})
+  transition(MI_WBA, {PUTM_NotOwner,GETM, GETS, PUTS_NotLast})
   {
     z_stall;
   }
