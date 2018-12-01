@@ -621,7 +621,7 @@ machine(L1Cache, "MSI L1 Cache")
   // =============================================================================
 
   //INVALID -> IS_D (-> SHARED)
-  transition(I, Load, IS_D) {
+  transition(I, {Load, Ifetch}, IS_D) {
     //allocate L1 entry
     i_allocateL1CacheBlock;
 
@@ -673,7 +673,7 @@ machine(L1Cache, "MSI L1 Cache")
   }
 
   //IS_D -> Stall
-  transition(IS_D, {Load, Store, Replacement, Inv}) {
+  transition(IS_D, {Load, Ifetch, Store, Replacement, Inv}) {
     z_stall;
   }
   // =============================================================================
@@ -714,7 +714,7 @@ machine(L1Cache, "MSI L1 Cache")
   }
 
   //STALL
-  transition(IM_AD, {Load, Store, Replacement, Fwd_GetS, Fwd_GetM}) {
+  transition(IM_AD, {Load, Ifetch, Store, Replacement, Fwd_GetS, Fwd_GetM}) {
     z_stall;
   }
   // =============================================================================
@@ -737,7 +737,7 @@ machine(L1Cache, "MSI L1 Cache")
   }
 
   //STALL
-  transition(IM_A, {Load, Store, Replacement, Fwd_GetS, Fwd_GetM}) {
+  transition(IM_A, {Load, Ifetch, Store, Replacement, Fwd_GetS, Fwd_GetM}) {
     z_stall;
   }
   // =============================================================================
@@ -748,7 +748,7 @@ machine(L1Cache, "MSI L1 Cache")
   // =============================================================================
 
   //LOAD hit
-  transition(S, Load) {
+  transition(S, {Load, Ifetch}) {
     r_load_hit;
     m_popMandatoryQueue;
   }
@@ -785,7 +785,7 @@ machine(L1Cache, "MSI L1 Cache")
   // =============================================================================
 
   //LOAD hit
-  transition(SM_AD, Load) {
+  transition(SM_AD, {Load, Ifetch}) {
     r_load_hit;
     m_popMandatoryQueue;
   }
@@ -842,7 +842,7 @@ machine(L1Cache, "MSI L1 Cache")
   // =============================================================================
 
   //LOAD hit
-  transition(SM_A, Load) {
+  transition(SM_A, {Load, Ifetch}) {
     r_load_hit;
     m_popMandatoryQueue;
   }
@@ -872,7 +872,7 @@ machine(L1Cache, "MSI L1 Cache")
   // =============================================================================
 
   //STALL
-  transition(SI_A, {Load, Store, Replacement}) {
+  transition(SI_A, {Load, Ifetch, Store, Replacement}) {
     z_stall;
   }
 
@@ -897,7 +897,7 @@ machine(L1Cache, "MSI L1 Cache")
   // =============================================================================
 
   //STALL
-  transition(II_A, {Load, Store, Replacement}) {
+  transition(II_A, {Load, Ifetch, Store, Replacement}) {
     z_stall;
   }
 
@@ -916,7 +916,7 @@ machine(L1Cache, "MSI L1 Cache")
   // =============================================================================
 
   //LOAD HIT
-  transition(M, Load) {
+  transition(M, {Load, Ifetch}) {
     r_load_hit;
     m_popMandatoryQueue;
   }
@@ -956,7 +956,7 @@ machine(L1Cache, "MSI L1 Cache")
   // =============================================================================
 
   //STALL
-  transition(MI_A, {Load, Store, Replacement}) {
+  transition(MI_A, {Load, Ifetch, Store, Replacement}) {
     z_stall;
   }
 
